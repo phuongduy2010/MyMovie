@@ -1,0 +1,46 @@
+<div class="app">
+    <h1>Demo</h1>
+    <h3>Movie Application using Angular 20</h3>
+
+    <div class="search">
+        <input type="text" placeholder="Search for Movies" [(ngModel)]="searchTerm"
+               (keyup.enter)="onSearch()" />
+        <img src="
+          https://media.geeksforgeeks.org/wp-content/uploads/20230626112934/search.png"
+             alt="search icon"
+            (click)="onSearch()" />
+    </div>
+    @if(loading()){
+        <div class="loading">
+            <img src="https://i.gifer.com/ZZ5H.gif" alt="Loading..." />
+        </div>
+    }
+    @else{
+        @let movies = moviesState();
+        @if(movies.length > 0){
+            <div class="container">
+                @for (movie of movies; track movie) {
+
+                 <a class="movie" [routerLink]="['/movie', movie.imdbID]">
+                    <div>
+                        <p>{{ movie.Title }}</p>
+                    </div>
+                    <div>
+                        <img [src]="movie.Poster !== 'N/A' ? movie.Poster : 
+                                    'https://via.placeholder.com/400'" [alt]="movie.Title" />
+                    </div>
+                    <div>
+                        <span>{{ movie.Type }}</span>
+                        <h3>{{ movie.Title }}</h3>
+                    </div>
+                </a>
+            }
+            </div>
+        }
+        @else{
+            <div class="empty">
+                <h2>No Movies found</h2>
+            </div>
+    }
+}
+</div>
