@@ -1,0 +1,20 @@
+app {
+    padding: 4rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+}
+
+h1 {
+    font-size: 3rem;
+    letter-spacing: 0.9px;
+    color: green;
+    margin-bottom: 1rem;
+}
+
+h3 {
+    font-size: 2rem;
+    color: black;
+    margin-bottom: 3rem;
+}

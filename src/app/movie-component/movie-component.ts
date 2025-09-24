@@ -1,4 +1,4 @@
-import { Component, signal } from '@angular/core';
+import { Component, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { Movie } from '../models/movie';
@@ -11,12 +11,13 @@ import { MovieService } from '../services/movieService';
   templateUrl: './movie-component.html',
   styleUrl: './movie-component.css'
 })
-export class MovieComponent {
+export class MovieComponent implements OnInit {
    searchTerm: string = '';
    movies: Array<Movie> = [];
    moviesState = signal<Movie[]>([]);
    loading = signal(false);
-   constructor(private movieSvc: MovieService) {
+   constructor(private movieSvc: MovieService) {}
+    ngOnInit(): void {
         this.searchMovies('SpiderMan');
     }
 
