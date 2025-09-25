@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
-import { MovieDetailComponent } from './movie-detail-component/movie-detail-component';
-import { MovieComponent } from './movie-component/movie-component';
+import { MovieComponent } from './features/movies/components/movie-component/movie-component';
+import { MovieDetailComponent } from './features/movies/components/movie-detail-component/movie-detail-component';
+
 
 export const routes: Routes = [
   { path: '', component: MovieComponent },

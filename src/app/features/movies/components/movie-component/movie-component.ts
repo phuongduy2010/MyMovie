@@ -1,8 +1,9 @@
 import { Component, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { Movie } from '../models/movie';
-import { MovieService } from '../services/movieService';
+import { Movie } from '../../data-access/movie.model';
+import { MovieService } from '../../service.ts/movie.service';
+
 
 
 @Component({
@@ -24,8 +25,10 @@ export class MovieComponent implements OnInit {
    searchMovies(title: string): void {
         this.loading.set(true);
         this.movieSvc.getMovies(title).subscribe(response => {
+            if(response.ok){
+                this.moviesState.set(response.data.items || []);
+            }
             this.loading.set(false);
-            this.moviesState.set(response || []);
         });
    }
 

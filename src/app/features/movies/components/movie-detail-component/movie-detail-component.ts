@@ -1,7 +1,7 @@
 import { Component, OnInit, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { MovieService } from '../services/movieService';
-import { MovieDetail } from '../models/movie-detail';
+import { MovieDetail } from '../../data-access/movie.model';
+import { MovieService } from '../../service.ts/movie.service';
 
 @Component({
   selector: 'app-movie-detail-component',
@@ -16,8 +16,10 @@ export class MovieDetailComponent implements OnInit {
   constructor(private route: ActivatedRoute, private movieService: MovieService) {}
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id');
-    this.movieService.getMovieDetail(id!).subscribe(result => {
-      this.movieState.set(result);
+    this.movieService.getMovieDetail(id!).subscribe(response => {
+      if(response.ok){
+        this.movieState.set(response.data);
+      }
       this.loading.set(false);
     });
   }
