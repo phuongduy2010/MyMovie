@@ -1,7 +1,10 @@
 import { MovieDetailDto, MovieDto, SearchResponseDto } from "./movie.dto";
 import { Movie, MovieDetail, SearchResponse } from "./movie.model";
-
-export function mapToMovie(dto: MovieDto): Movie{
+export const movieMapper = {
+  mapSearchResponse,
+  mapToMovieDetail,
+};
+function mapToMovie(dto: MovieDto): Movie{
     return {
         id : dto.imdbID,
         title: dto.Title,
@@ -10,7 +13,7 @@ export function mapToMovie(dto: MovieDto): Movie{
         poster: dto.Poster
     }
 }
-export function mapToMovieDetail(dto: MovieDetailDto): MovieDetail{
+function mapToMovieDetail(dto: MovieDetailDto): MovieDetail{
     const base = mapToMovie(dto);
     return {
         ...base,
@@ -22,7 +25,7 @@ export function mapToMovieDetail(dto: MovieDetailDto): MovieDetail{
 function isSuccess(response: String){
     return response.toLowerCase() == "False";
 }
-export function mapSearchResponse(res: SearchResponseDto): SearchResponse{
+function mapSearchResponse(res: SearchResponseDto): SearchResponse{
     const list = Array.isArray(res.Search) ? res.Search : [];
     return {
         items: list.map(mapToMovie),
