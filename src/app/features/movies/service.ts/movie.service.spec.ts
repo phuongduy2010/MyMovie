@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { provideHttpClient, withInterceptorsFromDi } from '@angular/common/http';
+import { provideHttpClient, withInterceptors, withInterceptorsFromDi } from '@angular/common/http';
 import { provideHttpClientTesting, HttpTestingController } from '@angular/common/http/testing';
 
 import { MovieService } from './movie.service';
@@ -7,6 +7,9 @@ import { MovieDetailDto, SearchResponseDto } from '../data-access/movie.dto';
 import { MovieDetail, SearchResponse } from '../data-access/movie.model';
 import { provideZonelessChangeDetection } from '@angular/core';
 import { movieMapper } from '../data-access/movie.mapper';
+import { OMDB_API_KEY, omdbInterceptor } from '../../../core/services/auth.interceptor';
+import { environment } from '../../../environment';
+import { ApiResult } from '../../../core/api/api.response';
 
 describe('MovieService', () => {
   let service: MovieService;
@@ -16,7 +19,11 @@ describe('MovieService', () => {
     TestBed.configureTestingModule({
       providers: [
         MovieService,
-        provideHttpClient(withInterceptorsFromDi()),
+        { provide: OMDB_API_KEY, useValue: environment.omdbApiKey },
+        provideHttpClient(
+          withInterceptors([omdbInterceptor]),
+          withInterceptorsFromDi()
+        ),
         provideHttpClientTesting(),
         provideZonelessChangeDetection(),
       ]
@@ -65,8 +72,8 @@ describe('MovieService', () => {
       r.urlWithParams.includes('apikey=fe2f6c44') &&
       r.urlWithParams.includes(`s=${encodeURIComponent(term)}`)
     );
-
-    req.flush(dto);
+    const wrappedOk: ApiResult<SearchResponseDto> = { ok: true, data: dto };
+    req.flush(wrappedOk);
   });
 
   it('getMovies: wraps HTTP error into { ok: false, error }', (done) => {
@@ -80,7 +87,11 @@ describe('MovieService', () => {
     });
 
     const req = httpMock.expectOne(() => true);
-    req.flush({ message: 'boom' }, { status: 500, statusText: 'Server Error' });
+     const wrappedErr: ApiResult<SearchResponseDto> = {
+      ok: false,
+      error: { status: 500, message: 'boom' }
+    };
+    req.flush(wrappedErr);
   });
 
   it('getMovieDetail: calls OMDb and maps success to { ok: true, data }', (done) => {
@@ -120,7 +131,8 @@ describe('MovieService', () => {
       r.urlWithParams.includes(`i=${encodeURIComponent(id)}`) &&
       r.urlWithParams.includes('plot=full')
     );
-    req.flush(dto);
+    const wrappedOk: ApiResult<MovieDetailDto> = { ok: true, data: dto };
+    req.flush(wrappedOk);
   });
 
   it('getMovieDetail: wraps HTTP error into { ok: false, error }', (done) => {
@@ -134,6 +146,10 @@ describe('MovieService', () => {
     });
 
     const req = httpMock.expectOne(() => true);
-    req.flush({ message: 'not found' }, { status: 404, statusText: 'Not Found' });
+    const wrappedErr: ApiResult<MovieDetailDto> = {
+      ok: false,
+      error: { status: 404, message: 'not found' }
+    };
+    req.flush(wrappedErr);
   });
 });
