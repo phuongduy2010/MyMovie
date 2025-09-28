@@ -3,10 +3,11 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { MovieDetail } from '../../data-access/movie.model';
 import { MovieService } from '../../service.ts/movie.service';
 import { Subscription } from 'rxjs';
+import { LoadingComponent } from '../../../../core/loading-component/loading-component';
 
 @Component({
   selector: 'app-movie-detail-component',
-  imports: [RouterLink],
+  imports: [RouterLink, LoadingComponent],
   templateUrl: './movie-detail-component.html',
   styleUrl: './movie-detail-component.css'
 })

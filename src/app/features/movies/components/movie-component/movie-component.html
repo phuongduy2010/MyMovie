@@ -10,12 +10,8 @@
              alt="search icon"
             (click)="onSearch()" />
     </div>
-    @if(loading()){
-        <div class="loading">
-            <img src="https://i.gifer.com/ZZ5H.gif" alt="Loading..." />
-        </div>
-    }
-    @else{
+    <app-loading-component [show]="loading()" />
+    @if(!loading()){
         @let movies = moviesState();
         @if(movies.length > 0){
             <div class="container">

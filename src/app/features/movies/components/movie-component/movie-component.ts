@@ -1,15 +1,18 @@
 import { Component, OnDestroy, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
+import { Subscription } from 'rxjs';
+
+
 import { Movie } from '../../data-access/movie.model';
 import { MovieService } from '../../service.ts/movie.service';
-import { Subscription } from 'rxjs';
+import { LoadingComponent } from '../../../../core/loading-component/loading-component';
 
 
 
 @Component({
   selector: 'app-movie-component',
-  imports: [RouterLink, FormsModule],
+  imports: [RouterLink, FormsModule, LoadingComponent],
   templateUrl: './movie-component.html',
   styleUrl: './movie-component.css'
 })

@@ -1,10 +1,6 @@
 <a routerLink="/">← Back</a>
-@if (loading()) { 
-      <div class="loading">
-            <img src="https://i.gifer.com/ZZ5H.gif" alt="Loading..." />
-        </div>
-    }
-@else {
+<app-loading-component [show]="loading()" />
+@if(!loading()) {
      @let movie = movieState();
     <h2>{{ movie.title }} ({{ movie.year }})</h2>
     <img [src]="movie.poster !== 'N/A' ? movie.poster : 'https://via.placeholder.com/400'"
