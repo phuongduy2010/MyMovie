@@ -6,7 +6,7 @@ import { Subscription } from 'rxjs';
 
 import { Movie } from '../../data-access/movie.model';
 import { MovieService } from '../../service.ts/movie.service';
-import { LoadingComponent } from '../../../../core/loading-component/loading-component';
+import { LoadingComponent } from '../../../../core/components/loading-component/loading-component';
 
 
 
