@@ -11,7 +11,7 @@ FROM nginx:stable-alpine
 # Remove default nginx content
 RUN rm -rf /usr/share/nginx/html/*
 # Copy built files
-COPY --from=builder /app/dist/my-movie-app /usr/share/nginx/html
+COPY --from=builder /app/dist/movie-app-v2 /usr/share/nginx/html
 # Optional: copy custom nginx config
 # COPY nginx.conf /etc/nginx/conf.d/default.conf
 EXPOSE 80
