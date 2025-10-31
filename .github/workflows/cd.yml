@@ -1,0 +1,102 @@
+name: Deploy to EKS
+
+on:
+  # automatic deploy after successful build-and-push workflow
+  workflow_run:
+    workflows: ["Build & Push to ECR"]
+    types:
+      - completed
+
+  # manual trigger to deploy a specific image tag
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: 'Image tag to deploy (defaults to "latest")'
+        required: false
+        default: 'latest'
+
+env:
+  # map secrets (values set in repository Secrets)
+  AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+  AWS_REGION: ${{ secrets.AWS_REGION }}
+  ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
+  EKS_CLUSTER_NAME: ${{ secrets.EKS_CLUSTER_NAME }}
+  K8S_DEPLOYMENT_NAME: ${{ secrets.K8S_DEPLOYMENT_NAME }}
+  K8S_CONTAINER_NAME: ${{ secrets.K8S_CONTAINER_NAME }}
+  K8S_NAMESPACE: ${{ secrets.K8S_NAMESPACE }} # optional; if not set, defaults to "default"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run == null || github.event.workflow_run.conclusion == 'success' }} # allow manual trigger OR only on successful build run
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: show trigger info
+        run: |
+          echo "Trigger event: $GITHUB_EVENT_NAME"
+          echo "Target image tag (input): ${{ github.event.inputs.image_tag || 'none' }}"
+          echo "Workflow run conclusion: ${{ github.event.workflow_run.conclusion || 'N/A' }}"
+
+      - name: Configure AWS credentials
+        if: ${{ env.AWS_ACCESS_KEY_ID != '' && env.AWS_SECRET_ACCESS_KEY != '' && env.AWS_REGION != '' }}
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ env.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ env.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Determine image tag to deploy
+        id: image
+        run: |
+          # Priorities:
+          # 1) workflow_dispatch input image_tag (github.event.inputs.image_tag)
+          # 2) if workflow_run triggered, deploy "latest"
+          # 3) fallback to "latest"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TAG="${{ github.event.inputs.image_tag || 'latest' }}"
+          else
+            TAG="latest"
+          fi
+          echo "IMAGE_TAG=$TAG" >> $GITHUB_OUTPUT
+
+      - name: Configure kubeconfig for EKS
+        run: |
+          aws eks update-kubeconfig --name "${EKS_CLUSTER_NAME}" --region "${AWS_REGION}"
+          kubectl config current-context
+          kubectl get ns || true
+
+      - name: list deployments in target namespace
+        run: |
+          NAMESPACE="${K8S_NAMESPACE:-default}"
+          echo "Using namespace: $NAMESPACE"
+          kubectl get deploy -n "$NAMESPACE" || true
+
+      - name: Update deployment image (if exists) or apply manifest if provided
+        env:
+          IMAGE_TAG: ${{ steps.image.outputs.IMAGE_TAG }}
+        run: |
+          NAMESPACE="${K8S_NAMESPACE:-default}"
+          IMAGE="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPOSITORY}:${IMAGE_TAG}"
+          echo "Image to deploy: $IMAGE"
+
+          if kubectl -n "$NAMESPACE" get deployment "$K8S_DEPLOYMENT_NAME" >/dev/null 2>&1; then
+            echo "Deployment $K8S_DEPLOYMENT_NAME found – updating container $K8S_CONTAINER_NAME"
+            kubectl -n "$NAMESPACE" set image deployment/"$K8S_DEPLOYMENT_NAME" "${K8S_CONTAINER_NAME}"="$IMAGE"
+            kubectl -n "$NAMESPACE" rollout status deployment/"$K8S_DEPLOYMENT_NAME" --timeout=180s || true
+          else
+            echo "Deployment $K8S_DEPLOYMENT_NAME not found in namespace $NAMESPACE."
+            if [ -f "k8s/deployment.yaml" ]; then
+              echo "Applying k8s/deployment.yaml (first deploy path)."
+              kubectl -n "$NAMESPACE" apply -f k8s/deployment.yaml
+              kubectl -n "$NAMESPACE" rollout status deployment/"$K8S_DEPLOYMENT_NAME" --timeout=180s || true
+            else
+              echo "No manifest found at k8s/deployment.yaml and deployment is missing. Exiting."
+              exit 1
+            fi
+          fi
+
+      - name: Done
+        run: echo "Deploy finished."
