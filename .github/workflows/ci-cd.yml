@@ -112,8 +112,8 @@ jobs:
           IMAGE="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPOSITORY}:${IMAGE_TAG}"
           echo "Updating deployment $K8S_DEPLOYMENT container $K8S_CONTAINER to image $IMAGE"
 
-          kubectl -n default set image deployment/"$K8S_DEPLOYMENT" "$K8S_CONTAINER"="$IMAGE" --record
-          kubectl -n default rollout status deployment/"$K8S_DEPLOYMENT" --timeout=120s
+          kubectl set image deployment/"$K8S_DEPLOYMENT" "$K8S_CONTAINER"="$IMAGE" --record
+          kubectl rollout status deployment/"$K8S_DEPLOYMENT" --timeout=120s
 
       - name: Done
         run: echo "Workflow finished."
