@@ -12,7 +12,7 @@ env:
   APP_NAME: mymovie
   DOCKERFILE_PATH: ./Dockerfile
   BUILD_OUTPUT_PATH: dist
-  NODE_VERSION: 18
+  NODE_VERSION: 22.12
 
 jobs:
   build-and-push:
