@@ -1,0 +1,113 @@
+name: Build → ECR → (optional) EKS deploy
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+env:
+  # change these defaults or supply via repository Secrets/Variables
+  APP_NAME: mymovie                 # used as image repo name and Kubernetes deployment name by default
+  DOCKERFILE_PATH: ./Dockerfile     # path to Dockerfile in repo root
+  BUILD_OUTPUT_PATH: dist           # location where Angular build outputs
+  NODE_VERSION: 18
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Use Node.js ${{ env.NODE_VERSION }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+
+    - name: Cache node modules
+      uses: actions/cache@v4
+      with:
+        path: ~/.npm
+        key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+        restore-keys: |
+          ${{ runner.os }}-node-
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Build Angular (production)
+      # if your Angular project lives in a subfolder, change working-directory accordingly
+      run: |
+        npm run build -- --configuration production
+      env:
+        CI: true
+
+    - name: Configure AWS credentials
+      if: secrets.AWS_ACCESS_KEY_ID && secrets.AWS_SECRET_ACCESS_KEY
+      uses: aws-actions/configure-aws-credentials@v2
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ secrets.AWS_REGION }}
+
+    - name: Login to Amazon ECR
+      if: secrets.AWS_ACCESS_KEY_ID && secrets.AWS_SECRET_ACCESS_KEY
+      run: |
+        aws ecr get-login-password --region ${{ secrets.AWS_REGION }} \
+          | docker login --username AWS --password-stdin ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
+
+    - name: Create ECR repo if not exists
+      if: secrets.AWS_ACCESS_KEY_ID && secrets.AWS_SECRET_ACCESS_KEY
+      run: |
+        aws ecr describe-repositories --repository-names "${{ secrets.ECR_REPOSITORY }}" >/dev/null 2>&1 || \
+        aws ecr create-repository --repository-name "${{ secrets.ECR_REPOSITORY }}"
+
+    - name: Build and push Docker image to ECR
+      # requires secrets: AWS_ACCOUNT_ID, AWS_REGION, ECR_REPOSITORY
+      env:
+        AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+        AWS_REGION: ${{ secrets.AWS_REGION }}
+        ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
+        IMAGE_TAG: ${{ github.sha }}
+      run: |
+        full_image="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPOSITORY}:${IMAGE_TAG}"
+        full_image_latest="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPOSITORY}:latest"
+        echo "Building image $full_image"
+        docker build -f ${{ env.DOCKERFILE_PATH }} -t "$full_image" .
+        docker tag "$full_image" "$full_image_latest"
+        docker push "$full_image"
+        docker push "$full_image_latest"
+      if: secrets.AWS_ACCOUNT_ID && secrets.AWS_REGION && secrets.ECR_REPOSITORY
+
+    - name: (Optional) Deploy to EKS - update deployment image
+      if: >
+        secrets.AWS_ACCESS_KEY_ID && secrets.AWS_SECRET_ACCESS_KEY &&
+        secrets.AWS_ACCOUNT_ID && secrets.AWS_REGION && secrets.EKS_CLUSTER_NAME &&
+        secrets.K8S_DEPLOYMENT_NAME && secrets.K8S_CONTAINER_NAME && secrets.ECR_REPOSITORY
+      env:
+        AWS_REGION: ${{ secrets.AWS_REGION }}
+        AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+        EKS_CLUSTER_NAME: ${{ secrets.EKS_CLUSTER_NAME }}
+        IMAGE_TAG: ${{ github.sha }}
+        K8S_DEPLOYMENT: ${{ secrets.K8S_DEPLOYMENT_NAME }}
+        K8S_CONTAINER: ${{ secrets.K8S_CONTAINER_NAME }}
+        ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
+      run: |
+        # configure kubeconfig to talk to EKS
+        aws eks update-kubeconfig --name "$EKS_CLUSTER_NAME" --region "$AWS_REGION"
+
+        IMAGE="${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPOSITORY}:${IMAGE_TAG}"
+        echo "Updating deployment $K8S_DEPLOYMENT container $K8S_CONTAINER to image $IMAGE"
+
+        kubectl -n default set image deployment/"$K8S_DEPLOYMENT" "$K8S_CONTAINER"="$IMAGE" --record
+        kubectl -n default rollout status deployment/"$K8S_DEPLOYMENT" --timeout=120s
+
+    - name: Done
+      run: echo "Workflow finished."
