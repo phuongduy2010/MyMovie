@@ -98,12 +98,12 @@ jobs:
             kubectl -n "$NAMESPACE" rollout status deployment/"$K8S_DEPLOYMENT_NAME" --timeout=180s || true
           else
             echo "Deployment $K8S_DEPLOYMENT_NAME not found in namespace $NAMESPACE."
-            if [ -f "k8s/deployment.yaml" ]; then
+            if [ -f "./k8s/deployment.yaml" ]; then
               echo "Applying k8s/deployment.yaml (first deploy path)."
-              kubectl -n "$NAMESPACE" apply -f k8s/deployment.yaml
+              kubectl -n "$NAMESPACE" apply -f ./k8s/deployment.yaml
               kubectl -n "$NAMESPACE" rollout status deployment/"$K8S_DEPLOYMENT_NAME" --timeout=180s || true
             else
-              echo "No manifest found at k8s/deployment.yaml and deployment is missing. Exiting."
+              echo "No manifest found at ./k8s/deployment.yaml and deployment is missing. Exiting."
               exit 1
             fi
           fi
