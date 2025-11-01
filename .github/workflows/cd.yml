@@ -16,6 +16,7 @@ on:
         default: 'latest'
 
 env:
+  DEPLOYMENT_PATH: ./k8s/deployment.yaml
   # map secrets (values set in repository Secrets)
   AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }} 
   AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }} 
@@ -98,12 +99,12 @@ jobs:
             kubectl -n "$NAMESPACE" rollout status deployment/"$K8S_DEPLOYMENT_NAME" --timeout=180s || true
           else
             echo "Deployment $K8S_DEPLOYMENT_NAME not found in namespace $NAMESPACE."
-            if [ -f "./k8s/deployment.yaml" ]; then
-              echo "Applying k8s/deployment.yaml (first deploy path)."
-              kubectl -n "$NAMESPACE" apply -f ./k8s/deployment.yaml
+            if [ -f "${{ env.DEPLOYMENT_PATH }}" ]; then
+              echo "Applying "$DEPLOYMENT_PATH" (first deploy path)."
+              kubectl -n "$NAMESPACE" apply -f "$DEPLOYMENT_PATH"
               kubectl -n "$NAMESPACE" rollout status deployment/"$K8S_DEPLOYMENT_NAME" --timeout=180s || true
             else
-              echo "No manifest found at ./k8s/deployment.yaml and deployment is missing. Exiting."
+              echo "No manifest found at "$DEPLOYMENT_PATH" and deployment is missing. Exiting."
               exit 1
             fi
           fi
