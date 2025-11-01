@@ -84,7 +84,10 @@ jobs:
           NAMESPACE="${K8S_NAMESPACE:-default}"
           echo "Using namespace: $NAMESPACE"
           kubectl get deploy -n "$NAMESPACE" || true
-
+      - name: Debug Path
+        run: |
+          ls -l k8s/
+          echo "Checking file existence: $(test -f k8s/deployment.yaml && echo 'Found' || echo 'Not Found')"
       - name: Update deployment image (if exists) or apply manifest if provided
         env:
           IMAGE_TAG: ${{ steps.image.outputs.IMAGE_TAG }}
