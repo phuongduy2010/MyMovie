@@ -37,6 +37,8 @@ jobs:
       contents: read
 
     steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
       - name: show trigger info
         run: |
           echo "Trigger event: $GITHUB_EVENT_NAME"
