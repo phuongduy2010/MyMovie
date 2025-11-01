@@ -1,7 +1,8 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: my-movie-app                # <-- set to K8S_DEPLOYMENT_NAME
+  name: my-movie-app  
+  namespace: demo             # <-- set to K8S_DEPLOYMENT_NAME
   labels: { app: my-movie-app }
 spec:
   replicas: 2
