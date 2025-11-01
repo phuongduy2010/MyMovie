@@ -1,12 +1,12 @@
 name: Build & Push to ECR
 
 on:
-  # push:
-  #   branches: [ main ]
+  push:
+    branches: [ main ]
   pull_request:
     branches: [ main ]
   workflow_dispatch:
-    
+
 env:
   DOCKERFILE_PATH: ./Dockerfile
   NODE_VERSION: 22.12
